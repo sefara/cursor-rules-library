@@ -1,0 +1,17 @@
+# General Rules
+
+Universal rules and best practices applicable to all project types.
+
+## Files
+
+- **[system-design.mdc](./system-design.mdc)** - Universal system design methodology
+- **[best-practices.mdc](./best-practices.mdc)** - General development best practices
+- **[communication.mdc](./communication.mdc)** - Data flow and communication patterns
+
+## Principles
+
+1. **Start Small**: Begin with minimal viable solution
+2. **Design First**: Create high-level design before implementation
+3. **Ask Humans**: Frequently ask for feedback and clarification
+4. **Iterate Relentlessly**: Expect many iterations
+5. **Use Appropriate Patterns**: Match patterns to problem domain

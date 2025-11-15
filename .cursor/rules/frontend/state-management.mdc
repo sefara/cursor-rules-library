@@ -1,0 +1,84 @@
+# Frontend State Management
+
+## Patterns across React, Angular, and Vanilla JS
+
+### 1. Local State
+- Component/function level state
+- Use for UI-only state (form inputs, modals)
+
+### 2. Global State
+- Application-wide state
+- User data, theme, settings
+
+### 3. Server State
+- Data from APIs
+- Use React Query, SWR, or similar
+
+## React Patterns
+
+### Context API
+```typescript
+const StateContext = createContext()
+const DispatchContext = createContext()
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'SET_USER': return { ...state, user: action.payload }
+    default: return state
+  }
+}
+```
+
+### Redux Toolkit
+- Use for complex global state
+- DevTools support
+- Time-travel debugging
+
+## Angular Patterns
+
+### Services as Stores
+```typescript
+@Injectable({ providedIn: 'root' })
+export class Store {
+  private state$ = new BehaviorSubject(initialState)
+  state = this.state$.asObservable()
+}
+```
+
+### NgRx
+- For complex applications
+- Predictable state updates
+- DevTools integration
+
+## Vanilla JS Patterns
+
+### Simple State Manager
+```javascript
+class StateManager {
+  constructor(initialState) {
+    this.state = initialState
+    this.listeners = []
+  }
+  
+  setState(newState) {
+    this.state = { ...this.state, ...newState }
+    this.notify()
+  }
+  
+  subscribe(listener) {
+    this.listeners.push(listener)
+  }
+  
+  notify() {
+    this.listeners.forEach(listener => listener(this.state))
+  }
+}
+```
+
+## Best Practices
+
+1. **Minimize Global State**: Keep state as local as possible
+2. **Normalize Data**: Structure state efficiently
+3. **Immutable Updates**: Don't mutate state directly
+4. **Selectors**: Derive computed values from state
+5. **Single Source of Truth**: One source per piece of data

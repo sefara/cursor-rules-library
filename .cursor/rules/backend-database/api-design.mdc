@@ -1,0 +1,330 @@
+# API Design Best Practices
+
+## RESTful API Principles
+
+### Resource-Based URLs
+```
+✅ GET    /api/users
+✅ GET    /api/users/:id
+✅ POST   /api/users
+✅ PUT    /api/users/:id
+✅ PATCH  /api/users/:id
+✅ DELETE /api/users/:id
+
+❌ /api/getUser
+❌ /api/createUser
+```
+
+### HTTP Methods
+- **GET**: Retrieve data (idempotent, no side effects)
+- **POST**: Create new resource
+- **PUT**: Replace entire resource
+- **PATCH**: Partial update
+- **DELETE**: Remove resource
+
+### Status Codes
+- **200 OK**: Success
+- **201 Created**: Resource created
+- **204 No Content**: Success, no response body
+- **400 Bad Request**: Invalid input
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: Not authorized
+- **404 Not Found**: Resource doesn't exist
+- **409 Conflict**: Conflict (e.g., duplicate)
+- **500 Internal Server Error**: Server error
+
+## API Structure
+
+### Versioning
+```
+/api/v1/users
+/api/v2/users
+```
+
+### Filtering, Sorting, Pagination
+```
+GET /api/users?status=active&sort=created_at&order=desc&page=1&limit=20
+```
+
+### Response Format
+```typescript
+// Success response
+{
+  "data": { ... },
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 100
+  }
+}
+
+// Error response
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input",
+    "details": [ ... ]
+  }
+}
+```
+
+## Authentication & Authorization
+
+### JWT Tokens
+```typescript
+// Request header
+Authorization: Bearer <token>
+
+// Verify token
+const token = req.headers.authorization?.replace('Bearer ', '')
+const decoded = jwt.verify(token, process.env.JWT_SECRET)
+```
+
+### API Keys
+```typescript
+// Request header
+X-API-Key: <api-key>
+
+// Validate
+const apiKey = req.headers['x-api-key']
+if (apiKey !== process.env.API_KEY) {
+  return res.status(401).json({ error: 'Invalid API key' })
+}
+```
+
+### Rate Limiting
+```typescript
+import rateLimit from 'express-rate-limit'
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+})
+
+app.use('/api/', limiter)
+```
+
+## Input Validation
+
+### Schema Validation
+```typescript
+import { z } from 'zod'
+
+const createUserSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  age: z.number().int().min(18).max(120)
+})
+
+// Validate
+const result = createUserSchema.safeParse(req.body)
+if (!result.success) {
+  return res.status(400).json({ error: result.error })
+}
+```
+
+### Sanitization
+```typescript
+import validator from 'validator'
+
+const email = validator.normalizeEmail(req.body.email)
+const sanitized = validator.escape(req.body.description)
+```
+
+## Error Handling
+
+### Consistent Error Format
+```typescript
+class APIError extends Error {
+  constructor(
+    public statusCode: number,
+    public code: string,
+    message: string,
+    public details?: any
+  ) {
+    super(message)
+  }
+}
+
+// Usage
+throw new APIError(400, 'VALIDATION_ERROR', 'Invalid email format')
+```
+
+### Error Handler Middleware
+```typescript
+app.use((err: APIError, req: Request, res: Response, next: NextFunction) => {
+  const statusCode = err.statusCode || 500
+  const code = err.code || 'INTERNAL_ERROR'
+  
+  res.status(statusCode).json({
+    error: {
+      code,
+      message: err.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    }
+  })
+})
+```
+
+## Documentation
+
+### OpenAPI/Swagger
+```typescript
+import swaggerJsdoc from 'swagger-jsdoc'
+
+const swaggerSpec = swaggerJsdoc({
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'My API',
+      version: '1.0.0',
+    },
+  },
+  apis: ['./routes/*.ts'],
+})
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+```
+
+### Endpoint Documentation
+```typescript
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of users
+ */
+app.get('/api/users', getUsers)
+```
+
+## Testing APIs
+
+### Unit Tests
+```typescript
+describe('GET /api/users', () => {
+  it('should return list of users', async () => {
+    const res = await request(app)
+      .get('/api/users')
+      .expect(200)
+    
+    expect(res.body.data).toBeInstanceOf(Array)
+  })
+})
+```
+
+### Integration Tests
+```typescript
+describe('User API', () => {
+  it('should create and retrieve user', async () => {
+    // Create
+    const createRes = await request(app)
+      .post('/api/users')
+      .send({ name: 'Test', email: 'test@example.com' })
+      .expect(201)
+    
+    // Retrieve
+    const getRes = await request(app)
+      .get(`/api/users/${createRes.body.data.id}`)
+      .expect(200)
+  })
+})
+```
+
+## Performance
+
+### Caching
+```typescript
+import redis from 'redis'
+
+const client = redis.createClient()
+
+app.get('/api/users', async (req, res) => {
+  const cacheKey = 'users:all'
+  
+  // Check cache
+  const cached = await client.get(cacheKey)
+  if (cached) {
+    return res.json(JSON.parse(cached))
+  }
+  
+  // Query database
+  const users = await db.user.findMany()
+  
+  // Cache result
+  await client.setex(cacheKey, 3600, JSON.stringify(users))
+  
+  res.json(users)
+})
+```
+
+### Compression
+```typescript
+import compression from 'compression'
+
+app.use(compression()) // Gzip responses
+```
+
+### Async Processing
+```typescript
+// For long-running tasks, return immediately and process async
+app.post('/api/process', async (req, res) => {
+  const jobId = uuid()
+  
+  // Queue job
+  await queue.add('process', { data: req.body }, { jobId })
+  
+  res.status(202).json({ jobId, status: 'processing' })
+})
+
+// Check status
+app.get('/api/process/:jobId', async (req, res) => {
+  const job = await queue.getJob(req.params.jobId)
+  res.json({ status: job.state, result: job.returnvalue })
+})
+```
+
+## Security
+
+### CORS
+```typescript
+import cors from 'cors'
+
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  credentials: true
+}))
+```
+
+### Helmet
+```typescript
+import helmet from 'helmet'
+
+app.use(helmet()) // Security headers
+```
+
+### Input Validation
+- Always validate and sanitize input
+- Use parameterized queries (prevent SQL injection)
+- Escape output to prevent XSS
+
+## Best Practices Summary
+
+1. **RESTful Design**: Follow REST principles
+2. **Consistent Responses**: Use consistent response format
+3. **Proper Status Codes**: Use appropriate HTTP status codes
+4. **Versioning**: Version your API
+5. **Documentation**: Document all endpoints
+6. **Validation**: Validate all inputs
+7. **Error Handling**: Consistent error responses
+8. **Security**: Authentication, authorization, rate limiting
+9. **Performance**: Caching, compression, async processing
+10. **Testing**: Write tests for all endpoints

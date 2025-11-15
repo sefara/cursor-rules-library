@@ -1,0 +1,229 @@
+---
+description: Guidelines for implementing real-time features using Supabase
+alwaysApply: false
+---
+
+# Use Realtime
+
+You're a Supabase expert in implementing real-time features. Follow these guidelines to effectively use Supabase's real-time capabilities:
+
+## General Guidelines
+
+1. **Enable Realtime on Tables:**
+
+   - Ensure that real-time is enabled on the tables you want to listen to.
+   - Use Supabase Dashboard or SQL to enable replication on tables.
+
+2. **Use Channels:**
+
+   - Create named channels for different types of real-time updates.
+   - Use descriptive channel names (e.g., `posts`, `user-123`, `chat-room-456`).
+
+3. **Clean Up Subscriptions:**
+
+   - Always unsubscribe from channels when components unmount or when no longer needed.
+   - Prevent memory leaks and unnecessary network traffic.
+
+4. **Handle Connection States:**
+
+   - Monitor connection status and handle reconnection scenarios.
+   - Implement retry logic for failed connections.
+
+## Best Practices
+
+1. **Specific Subscriptions:**
+
+   - Subscribe to specific events (INSERT, UPDATE, DELETE) rather than all events.
+   - Filter subscriptions to specific records or conditions when possible.
+
+2. **Efficient Filtering:**
+
+   - Use Supabase's filtering capabilities to receive only relevant updates.
+   - Filter by user ID, status, or other relevant criteria.
+
+3. **Error Handling:**
+
+   - Implement proper error handling for subscription failures.
+   - Log errors for debugging and monitoring.
+
+4. **Performance:**
+
+   - Avoid subscribing to too many channels simultaneously.
+   - Consider batching updates or debouncing rapid changes.
+
+## Example Templates
+
+### Basic Realtime Subscription (JavaScript/TypeScript)
+
+```typescript
+import { RealtimeChannel } from '@supabase/supabase-js'
+
+// Subscribe to changes on a table
+const channel = supabase
+  .channel('posts')
+  .on(
+    'postgres_changes',
+    {
+      event: '*', // INSERT, UPDATE, DELETE
+      schema: 'public',
+      table: 'posts',
+    },
+    (payload) => {
+      console.log('Change received!', payload)
+      handlePostChange(payload)
+    }
+  )
+  .subscribe()
+
+// Cleanup
+channel.unsubscribe()
+```
+
+### Filtered Realtime Subscription
+
+```typescript
+// Subscribe only to INSERT events for a specific user's posts
+const channel = supabase
+  .channel('user-posts')
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'posts',
+      filter: `author_id=eq.${userId}`,
+    },
+    (payload) => {
+      console.log('New post:', payload.new)
+      addPostToList(payload.new)
+    }
+  )
+  .subscribe()
+```
+
+### React Hook for Realtime
+
+```typescript
+import { useEffect, useState } from 'react'
+import { RealtimeChannel } from '@supabase/supabase-js'
+
+function useRealtimePosts(userId: string) {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null)
+
+  useEffect(() => {
+    // Subscribe to posts
+    const newChannel = supabase
+      .channel(`user-${userId}-posts`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'posts',
+          filter: `author_id=eq.${userId}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setPosts((prev) => [payload.new as Post, ...prev])
+          } else if (payload.eventType === 'UPDATE') {
+            setPosts((prev) =>
+              prev.map((post) =>
+                post.id === payload.new.id ? (payload.new as Post) : post
+              )
+            )
+          } else if (payload.eventType === 'DELETE') {
+            setPosts((prev) => prev.filter((post) => post.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe()
+
+    setChannel(newChannel)
+
+    // Cleanup
+    return () => {
+      newChannel.unsubscribe()
+    }
+  }, [userId])
+
+  return { posts, channel }
+}
+```
+
+### Enable Realtime on Table (SQL)
+
+```sql
+-- Enable replication for a table
+alter publication supabase_realtime add table public.posts;
+
+-- Or disable replication
+alter publication supabase_realtime drop table public.posts;
+```
+
+### Presence (Real-time Presence Feature)
+
+```typescript
+// Track user presence in a channel
+const channel = supabase.channel('room-123')
+
+channel
+  .on('presence', { event: 'sync' }, () => {
+    const state = channel.presenceState()
+    console.log('Online users:', state)
+  })
+  .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+    console.log('User joined:', newPresences)
+  })
+  .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+    console.log('User left:', leftPresences)
+  })
+  .subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await channel.track({
+        online_at: new Date().toISOString(),
+        user_id: userId,
+      })
+    }
+  })
+
+// Cleanup
+channel.untrack()
+channel.unsubscribe()
+```
+
+### Broadcasting Messages
+
+```typescript
+// Send a message to all subscribers of a channel
+const channel = supabase.channel('chat-room')
+
+channel.subscribe((status) => {
+  if (status === 'SUBSCRIBED') {
+    channel.send({
+      type: 'broadcast',
+      event: 'message',
+      payload: {
+        text: 'Hello everyone!',
+        user_id: userId,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  }
+})
+
+// Listen for broadcast messages
+channel.on('broadcast', { event: 'message' }, (payload) => {
+  console.log('Broadcast received:', payload.payload)
+  addMessageToChat(payload.payload)
+})
+```
+
+## Best Practices Summary
+
+1. **Enable Realtime**: Enable replication on tables that need real-time updates
+2. **Specific Subscriptions**: Subscribe to specific events and filters
+3. **Clean Up**: Always unsubscribe when done
+4. **Error Handling**: Handle connection failures gracefully
+5. **Performance**: Limit concurrent subscriptions and filter efficiently
+6. **Security**: Use RLS policies to ensure users only receive authorized updates

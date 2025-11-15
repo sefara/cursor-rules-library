@@ -1,0 +1,78 @@
+# LLM/AI Design Patterns
+
+## 1. Workflow
+
+Decompose complex tasks into a chain of multiple Nodes.
+
+> **Sweet Spot**: Don't make tasks too coarse (too complex for one LLM call) or too granular (not enough context, inconsistent results). Multiple iterations needed to find balance.
+
+**Example:** Article Writing
+- GenerateOutline → WriteSection → ReviewAndRefine
+
+For dynamic cases, consider using Agents.
+
+## 2. Structured Output
+
+Use clear prompting with schema validation:
+
+1. **Wrap** structure in code fences (e.g., `yaml`)
+2. **Validate** that all required fields exist (let Node handle retry)
+
+**Why YAML over JSON?**
+- LLMs struggle with escaping in JSON
+- YAML block literals (`|`) preserve newlines naturally
+- No need to escape interior quotes
+
+## 3. Map Reduce
+
+Suitable when you have:
+- Large input data (multiple files to process), or
+- Large output data (multiple forms to fill)
+
+And there's a logical way to break into smaller, ideally independent parts.
+
+**Pattern:**
+- Map phase: Use BatchNode to break down task
+- Reduce phase: Aggregate results
+
+## 4. RAG (Retrieval Augmented Generation)
+
+### Two-Stage Pipeline
+
+**Stage 1: Offline Indexing**
+- ChunkDocs (chunk raw text)
+- EmbedDocs (embed each chunk)
+- StoreIndex (store embeddings in vector database)
+
+**Stage 2: Online Query & Answer**
+- EmbedQuery (embed user question)
+- RetrieveDocs (retrieve top chunks from index)
+- GenerateAnswer (call LLM with question + chunks)
+
+## 5. Agent
+
+Node can take dynamic actions based on context using branching.
+
+> **Core Principles:**
+> 1. **Context Management**: Provide clear, relevant context (not entire chat history/files)
+> 2. **Action Space**: Well-structured, unambiguous, easy-to-use set of actions
+
+**Example:** Search Agent
+- DecideAction (search or answer)
+- SearchWeb (if searches, loops back)
+- DirectAnswer (when enough context gathered)
+
+## 6. Chat Memory
+
+Multi-turn conversations require memory management:
+
+1. **Limit** chat history to most recent N messages
+2. **Use vector search** to retrieve relevant exchanges beyond recent messages
+
+## 7. Multi-Agents (Advanced)
+
+Multiple Agents work together handling subtasks and communicating progress.
+
+Communication typically implemented using message queues in shared storage.
+
+> **Most of the time, you don't need Multi-Agents. Start with a simple solution first.**

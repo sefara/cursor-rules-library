@@ -1,0 +1,146 @@
+# ActivePieces Workflow Automation
+
+## Overview
+ActivePieces is an open-source workflow automation platform similar to n8n, designed for automation and integration tasks.
+
+## Best Practices
+
+### Workflow Structure
+1. **Component-Based**: Break workflows into reusable pieces
+2. **Clear Flow**: Design flows top-to-bottom or left-to-right consistently
+3. **Error Paths**: Always define error handling paths
+4. **Documentation**: Add notes/descriptions for complex logic
+
+### Piece (Node) Organization
+- **Naming Convention**: Use clear, descriptive names
+- **Grouping**: Organize pieces by function (trigger, action, transform)
+- **Reusability**: Create reusable pieces for common operations
+
+### Data Transformation
+- Use **Data Mapper** pieces for field transformations
+- **Code Piece** for complex logic (TypeScript/JavaScript)
+- **JSON Transform** for structure changes
+
+### Common Patterns
+
+#### 1. Event-Driven Workflow
+```
+Trigger Piece → Process → Action Piece → Response
+```
+
+#### 2. Conditional Execution
+```
+Trigger → Branch → [Condition A] → [Condition B] → Join
+```
+
+#### 3. Loop Processing
+```
+Trigger → Loop → Process Item → Collect Results
+```
+
+#### 4. Error Recovery
+```
+Main Flow → Error Handler → Retry → Fallback Action
+```
+
+### ActivePieces-Specific Tips
+
+#### Pieces
+- Use official pieces from marketplace when available
+- Create custom pieces for project-specific needs
+- Test pieces in isolation before integrating
+
+#### Code Pieces
+```typescript
+// TypeScript in Code pieces
+export const code = async ({ propsValue }: CodeExecutionProps) => {
+  const items = propsValue.items;
+  
+  const processed = items.map((item: any) => ({
+    processed: item.data * 2,
+    timestamp: new Date().toISOString()
+  }));
+  
+  return processed;
+};
+```
+
+#### API Integrations
+- Use **HTTP Request** piece for custom APIs
+- Store API keys in piece properties (not hardcoded)
+- Handle authentication properly (OAuth, API keys, etc.)
+
+#### Database Operations
+- Use database-specific pieces (PostgreSQL, MongoDB, etc.)
+- Use parameterized queries
+- Implement connection pooling for performance
+
+### Error Handling
+
+```typescript
+// In Code piece
+export const code = async ({ propsValue }: CodeExecutionProps) => {
+  try {
+    // Main logic
+    const result = await processData(propsValue.data);
+    return { success: true, data: result };
+  } catch (error) {
+    // Log error and return failure
+    console.error('Processing failed:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+};
+```
+
+### Testing
+1. **Unit Test Pieces**: Test individual pieces with sample data
+2. **Integration Test**: Test complete workflows end-to-end
+3. **Edge Cases**: Test with various data formats and error conditions
+4. **Performance**: Test with realistic data volumes
+
+### Best Practices
+
+#### Data Flow
+- Validate data at workflow entry points
+- Transform data shape early for consistency
+- Use TypeScript interfaces for type safety in Code pieces
+
+#### Secrets Management
+- Use environment variables for secrets
+- Store credentials in ActivePieces' credential system
+- Rotate credentials regularly
+
+#### Performance
+- Process data in batches when possible
+- Use parallel execution for independent operations
+- Cache frequently accessed data
+- Monitor workflow execution times
+
+#### Versioning
+- Export workflows as JSON/YAML
+- Use version control (Git)
+- Document changes and dependencies
+
+### Workflow Organization
+
+```
+project/
+├── workflows/
+│   ├── user-onboarding.yaml
+│   ├── data-sync.yaml
+│   └── notification-system.yaml
+├── pieces/
+│   ├── custom/
+│   │   └── my-custom-piece.ts
+└── docs/
+    └── workflow-documentation.md
+```
+
+### Monitoring
+- Set up alerts for failed workflows
+- Log important events
+- Track workflow execution metrics
+- Monitor API rate limits

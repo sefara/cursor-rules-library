@@ -1,0 +1,52 @@
+# Supabase Rules
+
+Official Supabase rules for AI code editors, based on [Supabase UI documentation](https://supabase.com/ui/docs/ai-editors-rules/prompts).
+
+## Files
+
+- **[create-db-functions.mdc](./create-db-functions.mdc)** - Guidelines for writing PostgreSQL database functions
+- **[create-migration.mdc](./create-migration.mdc)** - Guidelines for creating database migrations
+- **[create-rls-policies.mdc](./create-rls-policies.mdc)** - Guidelines for Row Level Security (RLS) policies
+- **[postgres-sql-style-guide.mdc](./postgres-sql-style-guide.mdc)** - PostgreSQL SQL style guide
+- **[use-realtime.mdc](./use-realtime.mdc)** - Guidelines for implementing real-time features
+- **[writing-supabase-edge-functions.mdc](./writing-supabase-edge-functions.mdc)** - Guidelines for Edge Functions
+
+## Key Principles
+
+1. **Security First**: Always enable RLS, use SECURITY INVOKER, set search_path
+2. **Best Practices**: Follow PostgreSQL and Supabase conventions
+3. **Type Safety**: Use explicit types and validation
+4. **Performance**: Use indexes, optimize queries, efficient real-time subscriptions
+5. **Consistency**: Follow SQL style guide and naming conventions
+
+## Quick Reference
+
+### Database Functions
+- Default to `SECURITY INVOKER`
+- Always set `search_path = ''`
+- Use fully qualified names
+- Prefer `IMMUTABLE` or `STABLE` when possible
+
+### Migrations
+- Use transactions
+- Make migrations idempotent
+- Use descriptive naming
+- Test before production
+
+### RLS Policies
+- Always enable RLS on user tables
+- Use `auth.uid()` for user-specific access
+- Principle of least privilege
+- Test thoroughly
+
+### Real-time
+- Enable replication on tables
+- Clean up subscriptions
+- Filter subscriptions efficiently
+- Handle connection states
+
+### Edge Functions
+- Handle CORS properly
+- Validate inputs
+- Use appropriate Supabase client (anon vs service role)
+- Implement error handling

@@ -1,0 +1,353 @@
+# Angular Frontend Development
+
+## Component Architecture
+
+### Component Structure
+```typescript
+import { Component, OnInit } from '@angular/core'
+import { UserService } from '../services/user.service'
+
+@Component({
+  selector: 'app-user-profile',
+  templateUrl: './user-profile.component.html',
+  styleUrls: ['./user-profile.component.css']
+})
+export class UserProfileComponent implements OnInit {
+  user: User | null = null
+  loading = false
+
+  constructor(private userService: UserService) {}
+
+  ngOnInit(): void {
+    this.loadUser()
+  }
+
+  loadUser(): void {
+    this.loading = true
+    this.userService.getUser().subscribe({
+      next: (user) => {
+        this.user = user
+        this.loading = false
+      },
+      error: (error) => {
+        console.error(error)
+        this.loading = false
+      }
+    })
+  }
+}
+```
+
+### Template Syntax
+```html
+<!-- Interpolation -->
+<div>{{ user.name }}</div>
+
+<!-- Property Binding -->
+<img [src]="user.avatar" [alt]="user.name">
+
+<!-- Event Binding -->
+<button (click)="handleClick()">Click</button>
+
+<!-- Two-Way Binding -->
+<input [(ngModel)]="user.name">
+
+<!-- *ngIf -->
+<div *ngIf="loading">Loading...</div>
+
+<!-- *ngFor -->
+<ul>
+  <li *ngFor="let item of items; let i = index">
+    {{ i + 1 }}. {{ item.name }}
+  </li>
+</ul>
+```
+
+## Services & Dependency Injection
+
+### Service Pattern
+```typescript
+import { Injectable } from '@angular/core'
+import { HttpClient } from '@angular/common/http'
+import { Observable } from 'rxjs'
+
+@Injectable({
+  providedIn: 'root'
+})
+export class UserService {
+  private apiUrl = '/api/users'
+
+  constructor(private http: HttpClient) {}
+
+  getUser(id: string): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/${id}`)
+  }
+
+  createUser(user: Partial<User>): Observable<User> {
+    return this.http.post<User>(this.apiUrl, user)
+  }
+
+  updateUser(id: string, user: Partial<User>): Observable<User> {
+    return this.http.put<User>(`${this.apiUrl}/${id}`, user)
+  }
+
+  deleteUser(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`)
+  }
+}
+```
+
+## RxJS & Observables
+
+### Common Patterns
+```typescript
+import { of, from } from 'rxjs'
+import { map, filter, catchError, tap } from 'rxjs/operators'
+
+// Map operator
+this.userService.getUser().pipe(
+  map(user => user.name.toUpperCase()),
+  tap(console.log),
+  catchError(error => {
+    console.error(error)
+    return of(null)
+  })
+).subscribe()
+
+// Multiple observables
+import { forkJoin } from 'rxjs'
+forkJoin({
+  user: this.userService.getUser(),
+  posts: this.postService.getPosts()
+}).subscribe(data => {
+  console.log(data.user, data.posts)
+})
+```
+
+### Async Pipe
+```html
+<div *ngIf="user$ | async as user">
+  {{ user.name }}
+</div>
+```
+
+```typescript
+user$ = this.userService.getUser().pipe(
+  catchError(() => of(null))
+)
+```
+
+## Forms
+
+### Template-Driven Forms
+```typescript
+import { FormsModule } from '@angular/forms'
+
+@Component({
+  template: `
+    <form #form="ngForm" (ngSubmit)="onSubmit(form)">
+      <input name="name" ngModel required>
+      <button type="submit" [disabled]="form.invalid">Submit</button>
+    </form>
+  `
+})
+```
+
+### Reactive Forms
+```typescript
+import { FormBuilder, FormGroup, Validators } from '@angular/forms'
+
+export class UserFormComponent {
+  form: FormGroup
+
+  constructor(private fb: FormBuilder) {
+    this.form = this.fb.group({
+      name: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      age: [0, [Validators.required, Validators.min(18)]]
+    })
+  }
+
+  onSubmit(): void {
+    if (this.form.valid) {
+      const value = this.form.value
+      // Handle submit
+    }
+  }
+}
+```
+
+## Routing
+
+### Route Configuration
+```typescript
+import { RouterModule, Routes } from '@angular/router'
+
+const routes: Routes = [
+  { path: '', component: HomeComponent },
+  { path: 'users', component: UserListComponent },
+  { path: 'users/:id', component: UserDetailComponent },
+  { path: '**', component: NotFoundComponent }
+]
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule]
+})
+export class AppRoutingModule {}
+```
+
+### Route Guards
+```typescript
+import { Injectable } from '@angular/core'
+import { CanActivate, Router } from '@angular/router'
+import { AuthService } from './auth.service'
+
+@Injectable()
+export class AuthGuard implements CanActivate {
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
+
+  canActivate(): boolean {
+    if (this.authService.isAuthenticated()) {
+      return true
+    }
+    this.router.navigate(['/login'])
+    return false
+  }
+}
+```
+
+### Route Parameters
+```typescript
+import { ActivatedRoute } from '@angular/router'
+
+constructor(private route: ActivatedRoute) {}
+
+ngOnInit(): void {
+  this.route.params.subscribe(params => {
+    const userId = params['id']
+    this.loadUser(userId)
+  })
+
+  // Or using snapshot (if params don't change)
+  const userId = this.route.snapshot.params['id']
+}
+```
+
+## State Management
+
+### Services as State Store
+```typescript
+import { BehaviorSubject } from 'rxjs'
+
+@Injectable({ providedIn: 'root' })
+export class UserStore {
+  private usersSubject = new BehaviorSubject<User[]>([])
+  users$ = this.usersSubject.asObservable()
+
+  setUsers(users: User[]): void {
+    this.usersSubject.next(users)
+  }
+
+  addUser(user: User): void {
+    const current = this.usersSubject.value
+    this.usersSubject.next([...current, user])
+  }
+}
+```
+
+### NgRx (for complex state)
+```typescript
+// actions
+export const loadUsers = createAction('[User] Load Users')
+export const loadUsersSuccess = createAction(
+  '[User] Load Users Success',
+  props<{ users: User[] }>()
+)
+
+// reducer
+export const userReducer = createReducer(
+  initialState,
+  on(loadUsersSuccess, (state, { users }) => ({ ...state, users }))
+)
+
+// component
+this.store.dispatch(loadUsers())
+this.store.select(selectUsers).subscribe(users => {
+  this.users = users
+})
+```
+
+## HTTP Interceptors
+
+### Authentication Interceptor
+```typescript
+import { Injectable } from '@angular/core'
+import { HttpInterceptor, HttpRequest, HttpHandler } from '@angular/common/http'
+
+@Injectable()
+export class AuthInterceptor implements HttpInterceptor {
+  intercept(req: HttpRequest<any>, next: HttpHandler) {
+    const token = localStorage.getItem('token')
+    
+    if (token) {
+      const cloned = req.clone({
+        headers: req.headers.set('Authorization', `Bearer ${token}`)
+      })
+      return next.handle(cloned)
+    }
+    
+    return next.handle(req)
+  }
+}
+```
+
+## Best Practices
+
+### Component Lifecycle
+- Use `ngOnInit` for initialization (not constructor)
+- Cleanup in `ngOnDestroy`
+- Avoid memory leaks (unsubscribe from observables)
+
+### Change Detection
+- Use `OnPush` change detection strategy when possible
+- Avoid heavy computations in templates
+
+### Performance
+- Lazy load modules
+- Use trackBy in *ngFor
+- Avoid unnecessary change detection
+
+### Testing
+```typescript
+import { TestBed } from '@angular/core/testing'
+
+describe('UserComponent', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      declarations: [UserComponent],
+      providers: [UserService]
+    })
+  })
+
+  it('should create', () => {
+    const fixture = TestBed.createComponent(UserComponent)
+    const component = fixture.componentInstance
+    expect(component).toBeTruthy()
+  })
+})
+```
+
+## Best Practices Summary
+
+1. **Components**: Single responsibility, reusable
+2. **Services**: Injectable, handle business logic
+3. **RxJS**: Use observables for async operations
+4. **Forms**: Reactive forms for complex forms
+5. **Routing**: Use guards for protected routes
+6. **State**: Services for simple state, NgRx for complex
+7. **HTTP**: Use interceptors for common operations
+8. **Testing**: Write unit and integration tests

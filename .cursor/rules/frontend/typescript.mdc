@@ -1,0 +1,357 @@
+# TypeScript Best Practices
+
+## Type Definitions
+
+### Basic Types
+```typescript
+// Primitives
+const name: string = 'John'
+const age: number = 30
+const active: boolean = true
+
+// Arrays
+const numbers: number[] = [1, 2, 3]
+const names: Array<string> = ['John', 'Jane']
+
+// Objects
+interface User {
+  id: string
+  name: string
+  email?: string // Optional
+  readonly createdAt: Date // Read-only
+}
+
+// Union types
+type Status = 'active' | 'inactive' | 'pending'
+type ID = string | number
+
+// Intersection types
+type Employee = User & {
+  employeeId: string
+  department: string
+}
+```
+
+### Generics
+```typescript
+// Generic function
+function identity<T>(arg: T): T {
+  return arg
+}
+
+// Generic interface
+interface Repository<T> {
+  findById(id: string): Promise<T | null>
+  findAll(): Promise<T[]>
+  save(entity: T): Promise<T>
+}
+
+// Generic class
+class DataService<T> {
+  constructor(private data: T[]) {}
+  
+  getItem(index: number): T {
+    return this.data[index]
+  }
+}
+```
+
+### Utility Types
+```typescript
+// Partial - makes all properties optional
+type PartialUser = Partial<User>
+
+// Pick - select specific properties
+type UserName = Pick<User, 'name' | 'email'>
+
+// Omit - exclude properties
+type UserWithoutId = Omit<User, 'id'>
+
+// Required - makes all properties required
+type RequiredUser = Required<User>
+
+// Record - map type
+type UserRoles = Record<string, string[]>
+```
+
+## Function Types
+
+### Function Signatures
+```typescript
+// Function type
+type Handler = (event: Event) => void
+
+// Function with overloads
+function process(data: string): string
+function process(data: number): number
+function process(data: string | number): string | number {
+  if (typeof data === 'string') {
+    return data.toUpperCase()
+  }
+  return data * 2
+}
+
+// Async functions
+async function fetchUser(id: string): Promise<User> {
+  const response = await fetch(`/api/users/${id}`)
+  return response.json()
+}
+```
+
+### Arrow Functions
+```typescript
+const add = (a: number, b: number): number => a + b
+
+const processUser = async (user: User): Promise<void> => {
+  // Process user
+}
+```
+
+## Classes
+
+### Class Definition
+```typescript
+class User {
+  private id: string
+  public name: string
+  protected email: string
+  
+  constructor(id: string, name: string, email: string) {
+    this.id = id
+    this.name = name
+    this.email = email
+  }
+  
+  // Getter
+  get userId(): string {
+    return this.id
+  }
+  
+  // Setter
+  set userId(value: string) {
+    if (value.length > 0) {
+      this.id = value
+    }
+  }
+  
+  // Method
+  greet(): string {
+    return `Hello, ${this.name}!`
+  }
+}
+
+// Inheritance
+class Admin extends User {
+  constructor(id: string, name: string, email: string) {
+    super(id, name, email)
+  }
+  
+  // Override
+  greet(): string {
+    return `Admin: ${super.greet()}`
+  }
+}
+```
+
+### Abstract Classes
+```typescript
+abstract class BaseService {
+  abstract process(data: unknown): Promise<void>
+  
+  protected validate(data: unknown): boolean {
+    // Common validation logic
+    return true
+  }
+}
+
+class UserService extends BaseService {
+  async process(data: User): Promise<void> {
+    if (!this.validate(data)) {
+      throw new Error('Invalid data')
+    }
+    // Process user
+  }
+}
+```
+
+## Interfaces vs Types
+
+### When to Use Interface
+- Object shapes
+- Can be extended/merged
+- Better for public APIs
+
+```typescript
+interface Config {
+  apiUrl: string
+}
+
+interface Config {
+  timeout: number // Merges with previous
+}
+
+interface ExtendedConfig extends Config {
+  retries: number
+}
+```
+
+### When to Use Type
+- Unions, intersections
+- Mapped types
+- More flexible
+
+```typescript
+type Status = 'active' | 'inactive'
+type Config = {
+  apiUrl: string
+  timeout: number
+}
+```
+
+## Type Guards
+
+### Type Guards
+```typescript
+function isUser(obj: unknown): obj is User {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'name' in obj
+  )
+}
+
+// Usage
+function process(data: unknown) {
+  if (isUser(data)) {
+    // TypeScript knows data is User here
+    console.log(data.name)
+  }
+}
+
+// Type narrowing
+function getValue(val: string | number): string {
+  if (typeof val === 'string') {
+    return val.toUpperCase()
+  }
+  return val.toString()
+}
+```
+
+## Error Handling
+
+### Custom Error Types
+```typescript
+class ValidationError extends Error {
+  constructor(
+    message: string,
+    public field: string,
+    public code: string
+  ) {
+    super(message)
+    this.name = 'ValidationError'
+  }
+}
+
+// Usage
+function validateUser(user: Partial<User>): void {
+  if (!user.name) {
+    throw new ValidationError('Name is required', 'name', 'REQUIRED')
+  }
+}
+```
+
+### Result Pattern
+```typescript
+type Result<T, E = Error> = 
+  | { success: true; data: T }
+  | { success: false; error: E }
+
+function fetchUser(id: string): Promise<Result<User>> {
+  return fetch(`/api/users/${id}`)
+    .then(res => res.json())
+    .then(data => ({ success: true, data }))
+    .catch(error => ({ success: false, error }))
+}
+```
+
+## Best Practices
+
+### Avoid `any`
+```typescript
+// ❌ Bad
+function process(data: any): any {
+  return data
+}
+
+// ✅ Good
+function process<T>(data: T): T {
+  return data
+}
+
+// ✅ Or use unknown
+function process(data: unknown): string {
+  if (typeof data === 'string') {
+    return data
+  }
+  return String(data)
+}
+```
+
+### Use Strict Mode
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true
+  }
+}
+```
+
+### Type Definitions for Libraries
+```typescript
+// types/custom.d.ts
+declare module 'custom-library' {
+  export function doSomething(): void
+}
+
+// Or install @types/package-name
+```
+
+### Enums
+```typescript
+// String enum (preferred)
+enum Status {
+  Active = 'active',
+  Inactive = 'inactive',
+  Pending = 'pending'
+}
+
+// Numeric enum
+enum Direction {
+  Up,
+  Down,
+  Left,
+  Right
+}
+
+// Const enum (inlined)
+const enum Color {
+  Red,
+  Green,
+  Blue
+}
+```
+
+## Best Practices Summary
+
+1. **Use Types**: Prefer types over `any`
+2. **Strict Mode**: Enable strict TypeScript checks
+3. **Interfaces**: Use interfaces for object shapes
+4. **Types**: Use types for unions, intersections
+5. **Generics**: Use generics for reusable code
+6. **Type Guards**: Use type guards for type narrowing
+7. **Utility Types**: Leverage built-in utility types
+8. **Documentation**: Add JSDoc comments for complex types

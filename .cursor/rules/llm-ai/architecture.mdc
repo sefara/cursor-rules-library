@@ -1,0 +1,108 @@
+# LLM/AI System Architecture: Node & Flow
+
+## Node Pattern (PocketFlow Framework)
+
+A **Node** is the smallest building block with 3 steps: `prep -> exec -> post`
+
+### Node Lifecycle
+
+1. **`prep(shared)`**
+   - Read and preprocess data from `shared` store
+   - Examples: query DB, read files, serialize data into string
+   - Return `prep_res` used by `exec()` and `post()`
+
+2. **`exec(prep_res)`**
+   - Execute compute logic (mostly LLM calls, remote APIs, tool use)
+   - ⚠️ **SHALL NOT** access `shared` directly
+   - ⚠️ If retries enabled, ensure idempotent implementation
+   - Return `exec_res` passed to `post()`
+
+3. **`post(shared, prep_res, exec_res)`**
+   - Postprocess and write data back to `shared`
+   - Examples: update DB, change states, log results
+   - **Decide next action** by returning a string (defaults to `"default"` if None)
+
+### Why 3 Steps?
+Enforces **separation of concerns**: data storage and data processing are separate.
+
+All steps are optional - e.g., you can only implement `prep` and `post` if you just need to process data.
+
+### Fault Tolerance
+
+```python
+# Configure retries and wait time
+my_node = SummarizeFile(max_retries=3, wait=10)
+```
+
+- `max_retries` (int): Max times to run `exec()`. Default is 1 (no retry)
+- `wait` (int): Time to wait (seconds) before next retry. Default is 0
+- Access current retry count via `self.cur_retry`
+
+### Graceful Fallback
+
+```python
+def exec_fallback(self, prep_res, exc):
+    # Handle exception after all retries
+    return fallback_result  # becomes exec_res
+```
+
+## Flow Pattern
+
+A **Flow** orchestrates a graph of Nodes with action-based transitions.
+
+### Action-based Transitions
+
+- **Default transition**: `node_a >> node_b` (if `post()` returns `"default"` or None)
+- **Named action**: `node_a - "action_name" >> node_b` (if `post()` returns `"action_name"`)
+
+### Creating Flows
+
+```python
+node_a >> node_b
+flow = Flow(start=node_a)
+flow.run(shared)
+```
+
+### Running Individual Nodes vs Flows
+
+- `node.run(shared)`: Runs node alone (prep->exec->post), returns Action
+- `flow.run(shared)`: Executes from start node, follows Actions to next node, continues until flow can't continue
+
+> ⚠️ `node.run(shared)` does NOT proceed to successor. Always use `flow.run(...)` in production.
+
+### Nested Flows
+
+A **Flow** can act like a Node, enabling powerful composition:
+
+```python
+subflow = Flow(start=node_a)
+subflow >> node_c
+parent_flow = Flow(start=subflow)
+```
+
+Node `params` will be a merging of ALL parents' `params`.
+
+## Node Types
+
+### Regular Node
+Standard `prep->exec->post` pattern
+
+### BatchNode
+For processing multiple items:
+- `prep(shared)`: Returns iterable (list, generator)
+- `exec(item)`: Called once per item
+- `post(shared, prep_res, exec_res_list)`: Receives list of results
+
+### AsyncNode
+For async operations:
+- `prep_async(shared)`, `exec_async(prep_res)`, `post_async(shared, prep_res, exec_res)`
+- Must be wrapped in `AsyncFlow`
+
+### BatchFlow
+Runs a Flow multiple times with different params:
+- `prep(shared)`: Returns list of param dicts
+- Each dict merged with BatchFlow's own params
+- Sub-flow run repeatedly, once per param dict
+
+### Parallel Nodes/Flows
+For concurrent execution of async operations (I/O-bound tasks)

@@ -1,0 +1,40 @@
+# Frontend Development Rules
+
+Rules for building frontend applications with React, Angular, TypeScript, and vanilla JavaScript.
+
+## Files
+
+- **[react.mdc](./react.mdc)** - React patterns and best practices
+- **[angular.mdc](./angular.mdc)** - Angular patterns and best practices
+- **[typescript.mdc](./typescript.mdc)** - TypeScript best practices
+- **[vanilla-js.mdc](./vanilla-js.mdc)** - Vanilla JavaScript patterns
+- **[state-management.mdc](./state-management.mdc)** - State management patterns
+
+## Principles
+
+1. **Component-Based**: Build reusable, composable components
+2. **Type Safety**: Use TypeScript for type safety
+3. **Performance**: Optimize renders, code split, lazy load
+4. **Accessibility**: Semantic HTML, ARIA attributes
+5. **Testing**: Write tests for components and logic
+6. **State Management**: Choose appropriate pattern for complexity
+
+## Quick Reference
+
+### React
+- Functional components with hooks
+- Custom hooks for reusable logic
+- Context API or Redux for state
+- React Query for server state
+
+### Angular
+- Component-service architecture
+- RxJS for async operations
+- Services for state management
+- NgRx for complex state
+
+### TypeScript
+- Strict mode enabled
+- Interfaces for object shapes
+- Types for unions/intersections
+- Avoid `any`, use `unknown`

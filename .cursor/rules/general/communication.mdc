@@ -1,0 +1,56 @@
+# Communication & Data Flow Patterns (Universal)
+
+## Data Flow Principles
+
+### 1. Shared State/Store (Common Pattern)
+
+- Global or shared data structure that components can read/write
+- Great for: data results, large content, anything multiple components need
+- Design the data structure and populate it ahead of time
+- Implemented differently per framework:
+  - Frontend: Redux, Zustand, Context API, Vuex
+  - Backend: Shared memory, Redis, Database
+  - Workflows: Workflow context, shared variables
+
+### 2. Props/Parameters (Component Communication)
+
+- Local, passed data between components
+- Used for passing data down or up
+- Parameter keys and values should typically be **immutable**
+- Good for: identifiers, configuration, temporary data
+
+### 3. Events/Callbacks (Asynchronous Communication)
+
+- Event-driven communication
+- Callbacks for async operations
+- Good for: user interactions, API responses, notifications
+
+## Best Practice
+
+> **Use Shared State/Store for complex applications.** It's flexible and easy to manage. It separates *Data Schema* from *Business Logic*, making code easier to maintain. Props/Parameters are better for simple parent-child communication.
+
+## Memory Management Analogy
+
+- **Shared State** = **Heap** (shared by all components)
+- **Props/Parameters** = **Stack** (passed by caller)
+- **Events** = **Message Queue** (async communication)
+
+## Patterns by Context
+
+### Frontend
+- State management (Redux, Context, Vuex)
+- Props drilling vs Context
+- Event emitters
+- WebSocket for real-time
+
+### Backend
+- Shared memory/singletons
+- Database as source of truth
+- Message queues (RabbitMQ, Redis)
+- API contracts
+
+### Workflows
+- Workflow context variables
+- Node outputs/inputs
+- Shared data stores
+- Event triggers

@@ -1,0 +1,192 @@
+---
+description: Style guide for writing PostgreSQL SQL in Supabase projects
+alwaysApply: false
+---
+
+# Postgres SQL Style Guide
+
+You're a Supabase expert in writing PostgreSQL SQL. Adhere to the following style guide to maintain consistency and readability in your SQL code:
+
+## General Guidelines
+
+1. **Use Lowercase for Keywords:**
+
+   - Write SQL keywords in lowercase to maintain consistency.
+   - Use uppercase for constants and quoted identifiers when needed.
+
+2. **Indentation and Formatting:**
+
+   - Use consistent indentation (typically 2 spaces) to enhance readability.
+   - Align columns, operators, and values for complex queries.
+
+3. **Descriptive Naming:**
+
+   - Use descriptive, snake_case names for tables, columns, and other database objects.
+   - Avoid abbreviations unless they are widely understood.
+
+## Best Practices
+
+1. **Avoid Select *:**
+
+   - Specify the required columns instead of using `SELECT *` to improve performance and clarity.
+   - Only select columns that are actually needed.
+
+2. **Use CTEs for Complex Queries:**
+
+   - Utilize Common Table Expressions (CTEs) to break down complex queries into manageable parts.
+   - Makes queries more readable and maintainable.
+
+3. **Commenting:**
+
+   - Add comments to explain the purpose and logic of complex queries.
+   - Use `--` for single-line comments and `/* */` for multi-line comments.
+
+4. **Consistent Formatting:**
+
+   - Put commas before column names (trailing commas).
+   - Use consistent spacing around operators and keywords.
+
+5. **Explicit Schema Names:**
+
+   - Always use fully qualified table names (`schema.table`) when appropriate.
+   - Default to `public` schema explicitly when working with Supabase.
+
+## Example Templates
+
+### Simple Query with Proper Formatting
+
+```sql
+-- Retrieve active users with their profile information
+select
+  u.id,
+  u.email,
+  u.created_at,
+  p.display_name,
+  p.avatar_url
+from
+  public.users u
+  left join public.profiles p on u.id = p.user_id
+where
+  u.deleted_at is null
+  and u.email_confirmed_at is not null
+order by
+  u.created_at desc;
+```
+
+### Query with CTEs
+
+```sql
+-- Retrieve the total sales for each product category
+with category_sales as (
+  select
+    c.id as category_id,
+    c.name as category_name,
+    sum(o.total_amount) as total_sales,
+    count(o.id) as order_count
+  from
+    public.orders o
+    inner join public.order_items oi on o.id = oi.order_id
+    inner join public.products p on oi.product_id = p.id
+    inner join public.categories c on p.category_id = c.id
+  where
+    o.status = 'completed'
+    and o.completed_at >= now() - interval '30 days'
+  group by
+    c.id,
+    c.name
+),
+top_categories as (
+  select
+    category_name,
+    total_sales,
+    order_count
+  from
+    category_sales
+  order by
+    total_sales desc
+  limit 10
+)
+select
+  category_name,
+  total_sales,
+  order_count,
+  round(total_sales / order_count, 2) as avg_order_value
+from
+  top_categories;
+```
+
+### Table Creation with Constraints
+
+```sql
+-- Create a well-structured table
+create table if not exists public.posts (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references public.users(id) on delete cascade,
+  title text not null,
+  content text not null,
+  published boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  
+  -- Constraints
+  constraint posts_title_length check (char_length(title) >= 3),
+  constraint posts_content_length check (char_length(content) >= 10)
+);
+
+-- Create indexes
+create index if not exists posts_author_id_idx on public.posts(author_id);
+create index if not exists posts_published_created_at_idx 
+  on public.posts(published, created_at desc) 
+  where published = true;
+```
+
+### Function with Clear Formatting
+
+```sql
+create or replace function public.get_user_stats(user_id uuid)
+returns table (
+  post_count bigint,
+  comment_count bigint,
+  total_likes bigint
+)
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  return query
+  select
+    count(distinct p.id)::bigint as post_count,
+    count(distinct c.id)::bigint as comment_count,
+    coalesce(sum(p.like_count), 0)::bigint as total_likes
+  from
+    public.posts p
+    left join public.comments c on p.id = c.post_id
+  where
+    p.author_id = get_user_stats.user_id
+    and p.deleted_at is null;
+end;
+$$;
+```
+
+### Update Statement with Clear Structure
+
+```sql
+-- Update user profile with validation
+update public.profiles
+set
+  display_name = coalesce(display_name, email),
+  bio = case
+    when char_length(bio) > 500 then left(bio, 500)
+    else bio
+  end,
+  updated_at = now()
+where
+  user_id = $1
+  and deleted_at is null
+returning
+  id,
+  display_name,
+  bio,
+  updated_at;
+```

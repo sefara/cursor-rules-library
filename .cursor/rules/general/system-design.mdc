@@ -1,0 +1,69 @@
+# System Design Methodology (Universal)
+
+## Core Principle
+> **If a human can't solve it, an LLM can't automate it!** Before building any system, thoroughly understand the problem by manually solving example inputs to develop intuition.
+
+## Development Process
+
+### 7-Step System Design (Collaborative with Humans)
+
+1. **Requirements** (Human: ★★★, AI: ★☆☆)
+   - Clarify requirements and evaluate if the system is a good fit
+   - Systems are suitable for:
+     - Routine tasks requiring common sense (filling forms, replying emails)
+     - Creative tasks with all inputs provided (building slides, writing SQL)
+   - Systems are NOT suitable for:
+     - Highly ambiguous tasks requiring complex info (building a startup)
+
+2. **Flow Design** (Human: ★★☆, AI: ★★☆)
+   - Outline high-level flow describing how the system orchestrates components
+   - Identify applicable design patterns (Map Reduce, Agent, RAG, MVC, etc.)
+   - For each component, provide high-level purpose description
+   - Draw the Flow/Architecture in diagram (mermaid, architecture diagrams)
+
+3. **Utilities & Dependencies** (Human: ★★☆, AI: ★★☆)
+   - Identify necessary utility functions, libraries, and external integrations
+   - Think of system as the brain; utilities are the body:
+     - Reading inputs (retrieving messages, reading files, API calls)
+     - Writing outputs (generating reports, sending notifications)
+     - Using external tools (APIs, databases, third-party services)
+   - **Start small!** Only include the most important utilities initially
+
+4. **Component Design** (Human: ★☆☆, AI: ★★★)
+   - Start with shared data design:
+     - Simple systems: in-memory dictionary/state
+     - Complex systems: database, state management
+     - **Remove Data Redundancy**: Don't store same data; use references or foreign keys
+   - For each component, design:
+     - `type`: Regular, Batch, or Async
+     - Input: How component reads data
+     - Processing: Which utility function component uses
+     - Output: How component writes data
+
+5. **Implementation** (Human: ★☆☆, AI: ★★★)
+   - **"Keep it simple, stupid!"** Avoid complex features and premature optimization
+   - **FAIL FAST!** Use proper error handling but avoid over-engineering
+   - Add logging throughout for debugging
+   - Follow language/framework conventions
+
+6. **Optimization** (Human: ★★☆, AI: ★★☆)
+   - **Use Intuition**: Human intuition for quick initial evaluation
+   - **Redesign Flow**: Consider breaking tasks further, introducing better patterns, improving context management
+   - Micro-optimizations:
+     - **Clear Instructions**: Clear, specific code/documentation
+     - **Examples**: Robust examples for difficult tasks
+   - **Expect to iterate many times** on Steps 3-6
+
+7. **Reliability** (Human: ★☆☆, AI: ★★★)
+   - **Retries**: Add retry logic for external calls
+   - **Logging and Visualization**: Maintain logs of all attempts, visualize system behavior
+   - **Testing**: Write tests for critical paths
+   - **Error Handling**: Graceful degradation when possible
+
+## Golden Rules
+
+1. **Start Small**: Begin with minimal viable solution
+2. **Design First**: Create high-level design (`docs/design.md`) before implementation
+3. **Ask Humans**: Frequently ask for feedback and clarification
+4. **Iterate Relentlessly**: Expect many iterations on design and optimization
+5. **Use Appropriate Patterns**: Match patterns to the problem domain (don't force patterns)

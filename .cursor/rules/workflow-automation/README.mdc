@@ -1,0 +1,33 @@
+# Workflow Automation Rules
+
+Rules for building automated workflows using n8n, ActivePieces, and similar tools.
+
+## Files
+
+- **[n8n.mdc](./n8n.mdc)** - n8n-specific best practices and patterns
+- **[activepieces.mdc](./activepieces.mdc)** - ActivePieces-specific guidance
+- **[patterns.mdc](./patterns.mdc)** - Universal workflow patterns applicable to all tools
+
+## Common Principles
+
+1. **Start Simple**: Begin with basic workflows, add complexity gradually
+2. **Error Handling**: Always include error handling for external calls
+3. **Testing**: Test with sample data before production
+4. **Documentation**: Document workflow purpose and data structures
+5. **Security**: Never hardcode credentials, use environment variables
+
+## Quick Reference
+
+### Common Patterns
+- **Linear**: Simple sequential processing
+- **Conditional**: Different paths based on conditions
+- **Parallel**: Concurrent independent operations
+- **Loop**: Process items in batches
+- **Error Recovery**: Graceful failure handling
+- **Retry**: Automatic retry on transient failures
+
+### Data Management
+- Validate data at entry points
+- Transform data shape early
+- Use variables for complex data structures
+- Pass only necessary data between nodes

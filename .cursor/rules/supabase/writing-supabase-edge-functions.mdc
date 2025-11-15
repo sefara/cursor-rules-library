@@ -1,0 +1,333 @@
+---
+description: Guidelines for writing Supabase Edge Functions
+alwaysApply: false
+---
+
+# Writing Supabase Edge Functions
+
+You're a Supabase expert in writing Edge Functions. Generate **high-quality Deno-based Edge Functions** that adhere to the following best practices:
+
+## General Guidelines
+
+1. **Use Deno Runtime:**
+
+   - Supabase Edge Functions run on Deno runtime.
+   - Use Deno-specific APIs and import styles.
+   - Import from CDN URLs or deno.land.
+
+2. **Environment Variables:**
+
+   - Use `Deno.env.get()` to access environment variables.
+   - Supabase automatically provides `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
+
+3. **CORS Handling:**
+
+   - Always handle CORS preflight requests (OPTIONS method).
+   - Set appropriate CORS headers for cross-origin requests.
+
+4. **Error Handling:**
+
+   - Implement comprehensive error handling.
+   - Return appropriate HTTP status codes.
+   - Provide meaningful error messages.
+
+## Best Practices
+
+1. **Function Structure:**
+
+   - Use the `serve` function from Deno's HTTP server.
+   - Handle different HTTP methods (GET, POST, PUT, DELETE, etc.).
+   - Validate request methods before processing.
+
+2. **Supabase Client:**
+
+   - Create Supabase client using service role key for admin operations.
+   - Use anon key for user-scoped operations.
+   - Pass user JWT token when available.
+
+3. **Type Safety:**
+
+   - Use TypeScript for type safety.
+   - Define interfaces for request/response payloads.
+
+4. **Input Validation:**
+
+   - Always validate incoming request data.
+   - Return 400 Bad Request for invalid inputs.
+
+5. **Response Format:**
+
+   - Use consistent response format (JSON).
+   - Include appropriate status codes.
+   - Return data in a predictable structure.
+
+## Example Templates
+
+### Basic Edge Function Structure
+
+```typescript
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    )
+
+    // Your function logic here
+
+    return new Response(
+      JSON.stringify({ data: 'success' }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
+  }
+})
+```
+
+### Edge Function with Request Validation
+
+```typescript
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+interface RequestPayload {
+  email: string
+  name: string
+}
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    // Validate request method
+    if (req.method !== 'POST') {
+      return new Response(
+        JSON.stringify({ error: 'Method not allowed' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 405,
+        }
+      )
+    }
+
+    // Parse and validate request body
+    const payload: RequestPayload = await req.json()
+    
+    if (!payload.email || !payload.name) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: email, name' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      )
+    }
+
+    // Create Supabase client with service role for admin operations
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Perform database operation
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .insert({
+        email: payload.email,
+        name: payload.name,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      throw error
+    }
+
+    return new Response(
+      JSON.stringify({ data }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
+  }
+})
+```
+
+### Edge Function with Authentication
+
+```typescript
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    // Get authorization header
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'No authorization header' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      )
+    }
+
+    // Create Supabase client with user token
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
+    )
+
+    // Verify user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser()
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      )
+    }
+
+    // User-specific logic here
+    const { data, error } = await supabaseClient
+      .from('user_data')
+      .select('*')
+      .eq('user_id', user.id)
+
+    if (error) throw error
+
+    return new Response(
+      JSON.stringify({ data }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
+  }
+})
+```
+
+### Edge Function with External API Call
+
+```typescript
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const { url } = await req.json()
+
+    // Call external API
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`External API error: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    return new Response(
+      JSON.stringify({ data }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
+  }
+})
+```
+
+## Best Practices Summary
+
+1. **Always Handle CORS**: Include CORS headers and handle OPTIONS requests
+2. **Validate Inputs**: Check request methods and validate payloads
+3. **Error Handling**: Use try-catch and return appropriate status codes
+4. **Authentication**: Verify user tokens for protected endpoints
+5. **Type Safety**: Use TypeScript interfaces for request/response types
+6. **Environment Variables**: Use Deno.env.get() for configuration
+7. **Consistent Responses**: Use standard JSON response format

@@ -1,0 +1,39 @@
+# Backend & Database Rules
+
+Universal rules for building backend APIs and working with databases.
+
+> **Note**: For Supabase-specific rules, see the [supabase/](../supabase/) folder which contains official Supabase rules from their documentation.
+
+## Files
+
+- **[database-patterns.mdc](./database-patterns.mdc)** - Universal database design patterns
+- **[api-design.mdc](./api-design.mdc)** - RESTful API design principles
+
+## Key Principles
+
+1. **Security First**: Always enable RLS, validate inputs, use parameterized queries
+2. **Performance**: Use indexes, pagination, caching
+3. **Consistency**: Consistent API design and error handling
+4. **Documentation**: Document APIs and database schema
+5. **Testing**: Test database operations and API endpoints
+
+## Quick Reference
+
+### Database
+- Normalize appropriately (don't over-normalize)
+- Index frequently queried columns
+- Use transactions for multi-step operations
+- Implement soft deletes when appropriate
+- Always enable Row Level Security (RLS) for user data
+
+### Supabase
+For Supabase-specific patterns (RLS policies, Edge Functions, database functions, migrations, realtime), see the [supabase/](../supabase/) folder.
+
+### API Design
+- RESTful resource-based URLs
+- Proper HTTP methods and status codes
+- Consistent response format
+- Input validation and sanitization
+- Authentication and authorization
+- Rate limiting
+- Documentation (OpenAPI/Swagger)

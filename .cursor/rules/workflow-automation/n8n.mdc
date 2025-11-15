@@ -1,0 +1,108 @@
+# n8n Workflow Automation
+
+## Overview
+n8n is a workflow automation tool that allows you to connect different services and automate processes using a visual workflow editor.
+
+## Best Practices
+
+### Workflow Structure
+1. **Start Simple**: Begin with basic workflows, add complexity gradually
+2. **Clear Naming**: Use descriptive names for nodes and workflows
+3. **Error Handling**: Always include error handling nodes
+4. **Testing**: Test workflows with sample data before production
+
+### Node Organization
+- **Group Related Nodes**: Use comments/brackets to group functionality
+- **Consistent Naming**: Name nodes by their function (e.g., "Get User Data", "Send Email")
+- **Documentation**: Add descriptions to complex nodes
+
+### Data Flow
+- Use **Set** nodes to structure data early in the workflow
+- Pass only necessary data between nodes
+- Use **Code** nodes for complex transformations
+- Store reusable data in **Variables** node
+
+### Common Patterns
+
+#### 1. Trigger → Process → Action
+```
+Webhook → Transform Data → API Call → Response
+```
+
+#### 2. Conditional Flows
+```
+Trigger → IF Node → [Branch A] → [Branch B] → Merge
+```
+
+#### 3. Loops for Batch Processing
+```
+Trigger → Split In Batches → Process Item → Aggregate Results
+```
+
+#### 4. Error Handling
+```
+Main Flow → Catch Error → Log Error → Notify → Alternative Path
+```
+
+### n8n-Specific Tips
+
+#### Credentials
+- Store credentials securely in n8n's credential system
+- Use environment variables for sensitive data
+- Never hardcode credentials in workflows
+
+#### Webhooks
+- Use webhooks for real-time triggers
+- Implement authentication on webhook endpoints
+- Add rate limiting if needed
+
+#### Code Nodes
+```javascript
+// Use JavaScript in Code nodes
+const items = $input.all();
+const processed = items.map(item => ({
+  json: {
+    processed: item.json.original_data * 2
+  }
+}));
+return processed;
+```
+
+#### HTTP Requests
+- Use **HTTP Request** node for external APIs
+- Set proper headers and authentication
+- Handle different response formats
+
+#### Database Operations
+- Use **Postgres**, **MySQL**, or specific database nodes
+- Parameterize queries to prevent SQL injection
+- Use transactions for multiple related operations
+
+### Error Handling Pattern
+
+```javascript
+// In Code node - wrap in try-catch
+try {
+  // Main logic
+  return [{ json: { success: true, data: result } }];
+} catch (error) {
+  return [{ json: { success: false, error: error.message } }];
+}
+```
+
+### Testing Strategy
+1. **Test with Sample Data**: Use "Execute Workflow" with test data
+2. **Test Each Node**: Execute nodes individually to verify output
+3. **Edge Cases**: Test with empty data, null values, invalid formats
+4. **Error Scenarios**: Test what happens when APIs fail
+
+### Performance
+- **Batch Processing**: Use Split in Batches for large datasets
+- **Parallel Execution**: Use parallel branches when possible
+- **Rate Limiting**: Add delays between API calls if needed
+- **Caching**: Cache data that doesn't change frequently
+
+### Version Control
+- Export workflows as JSON
+- Store in git repository
+- Document workflow purpose and dependencies

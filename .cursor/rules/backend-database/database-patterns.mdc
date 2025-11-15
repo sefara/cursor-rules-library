@@ -1,0 +1,220 @@
+# Database Design Patterns
+
+## Universal Database Patterns
+
+These patterns apply to PostgreSQL, MySQL, MongoDB, and other databases.
+
+## 1. Normalization (Relational DBs)
+
+### First Normal Form (1NF)
+- Each column contains atomic values
+- No repeating groups
+
+### Second Normal Form (2NF)
+- In 1NF
+- All non-key attributes fully dependent on primary key
+
+### Third Normal Form (3NF)
+- In 2NF
+- No transitive dependencies
+
+**Balance**: Don't over-normalize - sometimes denormalization improves performance.
+
+## 2. Indexing Strategy
+
+### When to Index
+- Frequently queried columns
+- Foreign keys (usually auto-indexed)
+- Columns used in WHERE, JOIN, ORDER BY
+- Columns used for filtering/searching
+
+### Index Types
+- **B-Tree**: Default, good for most queries
+- **Hash**: Equality comparisons only
+- **GIN**: Full-text search, arrays
+- **GiST**: Geometric data, full-text search
+
+### Composite Indexes
+```sql
+-- Order matters! Use most selective first
+CREATE INDEX idx_users_email_status ON users(email, status);
+-- Useful for: WHERE email = ? AND status = ?
+```
+
+## 3. Query Optimization
+
+### SELECT Best Practices
+```sql
+-- ❌ Bad: Select all columns
+SELECT * FROM users;
+
+-- ✅ Good: Select only needed columns
+SELECT id, name, email FROM users;
+
+-- ✅ Good: Use LIMIT for large datasets
+SELECT * FROM posts ORDER BY created_at DESC LIMIT 20;
+```
+
+### JOIN Patterns
+```sql
+-- Use INNER JOIN for required relationships
+SELECT p.*, u.name 
+FROM posts p
+INNER JOIN users u ON p.user_id = u.id;
+
+-- Use LEFT JOIN when related data is optional
+SELECT u.*, COUNT(p.id) as post_count
+FROM users u
+LEFT JOIN posts p ON u.id = p.user_id
+GROUP BY u.id;
+```
+
+### Avoid N+1 Queries
+```typescript
+// ❌ Bad: N+1 queries
+for (const user of users) {
+  const posts = await db.posts.findMany({ where: { userId: user.id } })
+}
+
+// ✅ Good: Single query with JOIN
+const usersWithPosts = await db.users.findMany({
+  include: { posts: true }
+})
+```
+
+## 4. Transactions
+
+### ACID Properties
+- **Atomicity**: All or nothing
+- **Consistency**: Database remains valid
+- **Isolation**: Concurrent transactions don't interfere
+- **Durability**: Committed changes persist
+
+### Transaction Pattern
+```typescript
+// Begin transaction
+await db.$transaction(async (tx) => {
+  // Multiple operations
+  const user = await tx.user.create({ data: {...} })
+  await tx.post.create({ 
+    data: { userId: user.id, ... } 
+  })
+  // All succeed or all fail
+})
+```
+
+## 5. Soft Deletes
+
+Instead of hard deletes, mark records as deleted:
+
+```sql
+ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP;
+
+-- Soft delete
+UPDATE users SET deleted_at = NOW() WHERE id = ?;
+
+-- Query excluding deleted
+SELECT * FROM users WHERE deleted_at IS NULL;
+```
+
+## 6. Audit Trail
+
+Track changes to important data:
+
+```sql
+CREATE TABLE audit_log (
+  id UUID PRIMARY KEY,
+  table_name VARCHAR(100),
+  record_id UUID,
+  action VARCHAR(10), -- INSERT, UPDATE, DELETE
+  old_data JSONB,
+  new_data JSONB,
+  changed_by UUID,
+  changed_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+## 7. Data Validation
+
+### Database Level
+```sql
+-- Check constraints
+ALTER TABLE users 
+ADD CONSTRAINT check_email_format 
+CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$');
+
+-- Not null constraints
+ALTER TABLE posts 
+ALTER COLUMN title SET NOT NULL;
+```
+
+### Application Level
+- Validate before database operations
+- Use TypeScript types/interfaces
+- Use validation libraries (Zod, Yup)
+
+## 8. Caching Strategy
+
+### Query Result Caching
+- Cache frequently accessed, rarely changed data
+- Invalidate cache on updates
+- Use Redis or similar for distributed caching
+
+### Cache-Aside Pattern
+```typescript
+// 1. Check cache
+let user = await cache.get(`user:${id}`)
+
+// 2. If miss, query database
+if (!user) {
+  user = await db.user.findUnique({ where: { id } })
+  await cache.set(`user:${id}`, user, 3600) // 1 hour
+}
+
+return user
+```
+
+## 9. Migration Patterns
+
+### Version Control
+- Store migrations in version control
+- Number migrations sequentially
+- Test migrations on staging first
+
+### Forward/Backward Compatibility
+- Additive changes are safe (new columns with defaults)
+- Breaking changes need careful migration
+- Consider feature flags for gradual rollout
+
+## 10. Connection Pooling
+
+### Benefits
+- Reuse connections
+- Limit total connections
+- Better performance
+
+### Configuration
+```typescript
+// Example: Prisma
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  // Connection pool settings
+})
+```
+
+## Best Practices Summary
+
+1. **Design Schema First**: Plan your schema before coding
+2. **Use Indexes Wisely**: Index frequently queried columns
+3. **Normalize Appropriately**: Balance normalization with performance
+4. **Validate Input**: Both at database and application level
+5. **Use Transactions**: For multi-step operations
+6. **Handle Errors**: Graceful error handling
+7. **Monitor Performance**: Track slow queries
+8. **Backup Regularly**: Automated backups
+9. **Test Migrations**: Always test before production
+10. **Document Schema**: Keep ER diagrams and documentation updated

@@ -1,0 +1,31 @@
+# LLM/AI System Rules
+
+Rules specific to building LLM-powered systems using the PocketFlow framework.
+
+## Files
+
+- **[architecture.mdc](./architecture.mdc)** - Node & Flow architecture patterns
+- **[design-patterns.mdc](./design-patterns.mdc)** - LLM design patterns (RAG, Agent, etc.)
+- **[python-server.mdc](./python-server.mdc)** - Python project structure for LLM systems
+
+## Quick Reference
+
+### Node Pattern
+```
+prep(shared) → exec(prep_res) → post(shared, prep_res, exec_res)
+```
+
+### Communication
+- **Shared Store**: Use for almost all cases (flexible, easy to manage)
+- **Params**: Only for Batch mode (identifiers like filenames)
+
+### When to Use Patterns
+- **Workflow**: Complex tasks requiring multiple steps
+- **Map Reduce**: Large input/output data that can be broken down
+- **RAG**: Questions requiring relevant context from documents
+- **Agent**: Dynamic actions based on context with branching
+- **Multi-Agents**: Multiple agents coordinating (rarely needed - start simple)
+
+## Core Principle
+
+**If a human can't solve it, an LLM can't automate it!** Understand the problem first.

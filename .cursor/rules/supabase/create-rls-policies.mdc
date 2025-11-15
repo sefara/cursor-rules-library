@@ -1,0 +1,166 @@
+---
+description: Guidelines for creating Row Level Security (RLS) policies in Supabase
+alwaysApply: false
+---
+
+# Database: Create RLS policies
+
+You're a Supabase expert in implementing Row Level Security (RLS) policies. Generate **secure and efficient RLS policies** that adhere to the following best practices:
+
+## General Guidelines
+
+1. **Principle of Least Privilege:**
+
+   - Grant the minimum necessary permissions to users to perform their tasks.
+   - Start restrictive and expand access only as needed.
+
+2. **Always Enable RLS:**
+
+   - Always enable RLS on tables containing user data.
+   - Without RLS, tables are accessible to all authenticated users.
+
+3. **Explicit Policies:**
+
+   - Define explicit policies for each table and operation (SELECT, INSERT, UPDATE, DELETE).
+   - Avoid relying on default permissions.
+
+4. **Test Policies:**
+
+   - Thoroughly test RLS policies to ensure they enforce the desired access controls.
+   - Test with different user roles and scenarios.
+
+## Best Practices
+
+1. **Use Session Variables:**
+
+   - Utilize `auth.uid()` to get the current user's ID.
+   - Use `auth.role()` for role-based access control.
+   - Leverage other session variables as needed.
+
+2. **Combine Policies:**
+
+   - Combine multiple policies to achieve complex access control requirements.
+   - Use `USING` clauses for SELECT/UPDATE/DELETE, `WITH CHECK` for INSERT/UPDATE.
+
+3. **Policy Naming:**
+
+   - Use descriptive policy names that indicate their purpose.
+   - Example: `"Users can view their own orders"` instead of `"policy1"`.
+
+4. **Performance:**
+
+   - Keep policy expressions simple and efficient.
+   - Use indexes on columns referenced in policies (e.g., `user_id`).
+
+5. **Monitor and Audit:**
+
+   - Regularly monitor and audit RLS policies to ensure they remain effective and up-to-date.
+   - Review policies when adding new features.
+
+## Example Templates
+
+### Basic RLS Policy
+
+```sql
+-- Enable RLS on the 'orders' table
+alter table public.orders
+enable row level security;
+
+-- Create a policy to allow users to view their own orders
+create policy "Users can view their own orders"
+on public.orders
+for select
+using (user_id = auth.uid());
+```
+
+### Multiple Policies for Different Operations
+
+```sql
+-- Enable RLS
+alter table public.orders
+enable row level security;
+
+-- SELECT: Users can view their own orders
+create policy "Users can view own orders"
+on public.orders
+for select
+using (user_id = auth.uid());
+
+-- INSERT: Users can create their own orders
+create policy "Users can create own orders"
+on public.orders
+for insert
+with check (user_id = auth.uid());
+
+-- UPDATE: Users can update their own orders
+create policy "Users can update own orders"
+on public.orders
+for update
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+-- DELETE: Users can delete their own orders
+create policy "Users can delete own orders"
+on public.orders
+for delete
+using (user_id = auth.uid());
+```
+
+### Policy with Role-Based Access
+
+```sql
+-- Admin role can access all records
+create policy "Admins have full access"
+on public.orders
+for all
+using (
+  auth.role() = 'authenticated' and
+  exists (
+    select 1 from public.user_roles
+    where user_id = auth.uid()
+    and role = 'admin'
+  )
+);
+
+-- Regular users can only access their own
+create policy "Users can access own orders"
+on public.orders
+for all
+using (user_id = auth.uid());
+```
+
+### Policy with Additional Conditions
+
+```sql
+-- Users can only view published posts or their own unpublished posts
+create policy "Users can view published or own posts"
+on public.posts
+for select
+using (
+  published = true
+  or (published = false and author_id = auth.uid())
+);
+```
+
+### Policy for Public Read, Authenticated Write
+
+```sql
+-- Anyone can read
+create policy "Public posts are viewable by everyone"
+on public.posts
+for select
+using (published = true);
+
+-- Only authenticated users can create
+create policy "Authenticated users can create posts"
+on public.posts
+for insert
+with check (auth.role() = 'authenticated');
+
+-- Only authors can update
+create policy "Authors can update own posts"
+on public.posts
+for update
+using (author_id = auth.uid())
+with check (author_id = auth.uid());
+```

@@ -1,0 +1,148 @@
+# Python Server-Side for LLM Systems
+
+## Project Structure
+
+```
+my_llm_project/
+├── main.py                 # Project entry point
+├── flow.py                 # System flow implementation
+├── utils/                  # Utility functions
+│   ├── __init__.py
+│   ├── call_llm.py        # One file per API call
+│   └── search_web.py
+├── requirements.txt
+└── docs/
+    └── design.md          # High-level design (no-code)
+```
+
+## File Organization Principles
+
+### `docs/design.md`
+- Contains project documentation for each design step
+- Should be **high-level and no-code**
+- Documents: Requirements, Flow Design, Utilities, Node Design
+
+### `utils/` Directory
+- Contains **all utility functions**
+- **One Python file per API call** (e.g., `call_llm.py`, `search_web.py`)
+- Each file should include a `main()` function to test that API call
+
+### `flow.py`
+- Implements system's flow
+- Start with node definitions
+- Followed by overall structure/connections
+
+### `main.py`
+- Serves as project's entry point
+
+## Python Best Practices
+
+### Error Handling
+```python
+# Fail fast - let errors bubble up during development
+# Add proper error handling in production
+def exec(self, prep_res):
+    # Validate inputs
+    if not prep_res:
+        raise ValueError("prep_res cannot be empty")
+    # Process
+    return result
+```
+
+### Logging
+```python
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class MyNode(Node):
+    def exec(self, prep_res):
+        logger.info(f"Processing: {prep_res[:50]}...")
+        # ...
+```
+
+### Environment Variables
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("OPENAI_API_KEY")
+if not API_KEY:
+    raise ValueError("OPENAI_API_KEY not set in environment")
+```
+
+### Async/Await
+```python
+import asyncio
+
+class AsyncNode(AsyncNode):
+    async def prep_async(self, shared):
+        # Async I/O operations
+        data = await fetch_data_async()
+        return data
+```
+
+## Utility Function Guidelines
+
+**We DO NOT provide built-in utility functions.** Implement your own.
+
+### Why?
+- LLM APIs change frequently (hardcoding = maintenance nightmare)
+- Need flexibility to switch vendors, use fine-tuned models, deploy local LLMs
+- Need optimizations like prompt caching, request batching, response streaming
+
+### Common Utilities (Examples Only)
+
+1. **LLM Wrapper** (`utils/call_llm.py`)
+   - Handle chat history
+   - Add in-memory caching (⚠️ conflicts with retries)
+   - Enable logging
+   - Store API key in environment variable
+
+2. **Embedding Calls** (`utils/embedding.py`)
+   - Get embeddings for text
+
+3. **Vector Database** (`utils/vector.py`)
+   - Create index, search index (e.g., Faiss)
+
+4. **Local Database** (`utils/database.py`)
+   - Execute SQL queries (⚠️ beware SQL injection)
+
+5. **PDF Extraction** (`utils/pdf.py`)
+   - Extract text from PDFs
+   - For image-based PDFs, use LLM with vision capabilities
+
+6. **Web Crawling** (`utils/web.py`)
+   - Crawl web pages
+
+7. **Search** (`utils/search.py`)
+   - Search engines (e.g., SerpAPI)
+
+8. **Audio Transcription** (`utils/audio.py`)
+   - Transcribe audio (e.g., OpenAI Whisper)
+
+## Caching Warnings
+
+> ⚠️ Caching conflicts with Node retries (retries yield same result). Use cached results only if not retried:
+> ```python
+> def call_llm(prompt, use_cache):
+>     if use_cache:
+>         return cached_call(prompt)
+>     return cached_call.__wrapped__(prompt)
+> ```
+
+## Type Hints (Optional but Recommended)
+
+```python
+from typing import Dict, List, Optional, Any
+
+class MyNode(Node):
+    def prep(self, shared: Dict[str, Any]) -> str:
+        return shared.get("data", "")
+    
+    def exec(self, prep_res: str) -> Dict[str, str]:
+        return {"summary": "..."}
+```

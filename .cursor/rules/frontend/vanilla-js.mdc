@@ -1,0 +1,105 @@
+# Vanilla JavaScript Best Practices
+
+## Modern JavaScript (ES6+)
+
+### Variables
+```javascript
+// Use const by default
+const name = 'John'
+
+// Use let when reassignment needed
+let count = 0
+count++
+
+// Avoid var
+```
+
+### Template Literals
+```javascript
+const message = `Hello, ${name}! You have ${count} items.`
+```
+
+### Arrow Functions
+```javascript
+const add = (a, b) => a + b
+const users = items.map(item => item.name)
+```
+
+### Destructuring
+```javascript
+const { name, email } = user
+const [first, second] = items
+```
+
+### Spread Operator
+```javascript
+const newArray = [...oldArray, newItem]
+const newObject = { ...oldObject, newProp: value }
+```
+
+## DOM Manipulation
+
+### Query Selectors
+```javascript
+// Single element
+const element = document.querySelector('.class')
+const elementById = document.getElementById('id')
+
+// Multiple elements
+const elements = document.querySelectorAll('.class')
+```
+
+### Creating Elements
+```javascript
+const div = document.createElement('div')
+div.textContent = 'Hello'
+div.classList.add('container')
+document.body.appendChild(div)
+```
+
+### Event Listeners
+```javascript
+button.addEventListener('click', (e) => {
+  e.preventDefault()
+  // Handle click
+})
+
+// With options
+element.addEventListener('click', handler, { once: true })
+```
+
+## Async/Await
+
+```javascript
+async function fetchData() {
+  try {
+    const response = await fetch('/api/data')
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error:', error)
+    throw error
+  }
+}
+```
+
+## Modules (ES6)
+
+```javascript
+// Export
+export function utility() {}
+export const constant = 'value'
+export default class MyClass {}
+
+// Import
+import { utility, constant } from './module.js'
+import MyClass from './module.js'
+```
+
+## Best Practices
+
+1. **Use Modern Syntax**: ES6+ features
+2. **Avoid Global Variables**: Use modules
+3. **Error Handling**: Use try-catch for async
+4. **Performance**: Debounce/throttle events
+5. **Accessibility**: Use semantic HTML, ARIA

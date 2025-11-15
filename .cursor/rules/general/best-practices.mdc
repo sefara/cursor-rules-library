@@ -1,0 +1,51 @@
+# General Best Practices
+
+## Development Philosophy
+
+1. **Start Small**: Only include most important features initially
+2. **Keep it Simple**: Avoid complex features and premature optimization
+3. **Fail Fast**: Use proper error handling but identify weak points quickly
+4. **Log Everything**: Add logging throughout for debugging
+5. **Test Critical Paths**: Write tests for core functionality
+
+## Data Design
+
+- **Remove Data Redundancy**: Don't store same data; use references or foreign keys
+- **Design Schema First**: Decide data structure or DB schema first based on app requirements
+- **Separation of Concerns**: Separate Data Schema from Business Logic
+- **Normalization**: For databases, follow normalization principles (but don't over-normalize)
+
+## Code Organization
+
+- **Modular Design**: Break code into logical modules/components
+- **Single Responsibility**: Each function/component should do one thing well
+- **DRY Principle**: Don't Repeat Yourself - extract common patterns
+- **Naming Conventions**: Use clear, descriptive names following language conventions
+
+## Error Handling
+
+- **Graceful Degradation**: Handle errors gracefully when possible
+- **Logging**: Log errors with context for debugging
+- **User-Friendly Messages**: Provide meaningful error messages to users
+- **Retry Logic**: Implement retry logic for transient failures
+
+## Performance
+
+- **Measure First**: Profile before optimizing
+- **Cache Wisely**: Use caching where it makes sense
+- **Lazy Loading**: Load resources when needed
+- **Batch Operations**: Group similar operations when possible
+
+## Security
+
+- **Never Trust Input**: Validate and sanitize all inputs
+- **Use Environment Variables**: Store secrets in environment variables, never in code
+- **Principle of Least Privilege**: Grant minimum necessary permissions
+- **Keep Dependencies Updated**: Regularly update dependencies for security patches
+
+## Documentation
+
+- **Code Comments**: Comment complex logic and business rules
+- **API Documentation**: Document APIs clearly
+- **README**: Keep README up to date with setup and usage instructions
+- **Architecture Docs**: Document high-level architecture and design decisions
